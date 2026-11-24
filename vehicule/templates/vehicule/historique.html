@@ -1,0 +1,56 @@
+{% extends "vehicule/base.html" %}
+
+{% block titre %}Historique · {{ nom_site }}{% endblock %}
+
+{% block contenu %}
+<main class="page-historique">
+    <div class="carte">
+        <div class="carte-entete">
+            <h2>Historique complet</h2>
+            <a class="lien-retour" href="{% url 'dashboard' %}">← Retour au dashboard</a>
+        </div>
+
+        <!-- Filtre par zone : recharge la page avec ?zone=... -->
+        <div class="filtres">
+            <span class="sous">Filtrer :</span>
+            <a class="filtre {% if zone_choisie == '' %}actif{% endif %}" href="?">Toutes</a>
+            <a class="filtre {% if zone_choisie == '0' %}actif{% endif %}" href="?zone=0">Zone 0</a>
+            <a class="filtre {% if zone_choisie == '1' %}actif{% endif %}" href="?zone=1">Zone 1</a>
+            <a class="filtre {% if zone_choisie == '2' %}actif{% endif %}" href="?zone=2">Zone 2</a>
+            <span class="sous total">{{ total }} mesure{{ total|pluralize }}</span>
+        </div>
+
+        <table>
+            <thead>
+                <tr><th>Date et heure</th><th>Distance</th><th>Zone</th><th>Vitesse</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+                {% for m in page %}
+                <tr>
+                    <td>{{ m.date|date:"d/m/Y H:i:s" }}</td>
+                    <td>{% if m.distance is None %}—{% else %}{{ m.distance|floatformat:0 }} cm{% endif %}</td>
+                    <td><span class="pastille z{{ m.zone }}">Zone {{ m.zone }}</span></td>
+                    <td>{{ m.vitesse }} %</td>
+                    <td>{{ m.get_action_display }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="vide">Aucune mesure pour le moment.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Pagination : on garde le filtre de zone dans les liens -->
+        {% if page.paginator.num_pages > 1 %}
+        <nav class="pagination">
+            {% if page.has_previous %}
+                <a href="?page={{ page.previous_page_number }}{% if zone_choisie %}&zone={{ zone_choisie }}{% endif %}">← Précédente</a>
+            {% endif %}
+            <span>Page {{ page.number }} sur {{ page.paginator.num_pages }}</span>
+            {% if page.has_next %}
+                <a href="?page={{ page.next_page_number }}{% if zone_choisie %}&zone={{ zone_choisie }}{% endif %}">Suivante →</a>
+            {% endif %}
+        </nav>
+        {% endif %}
+    </div>
+</main>
+{% endblock %}

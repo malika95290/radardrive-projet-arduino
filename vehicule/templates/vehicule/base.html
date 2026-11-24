@@ -1,0 +1,41 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block titre %}{{ nom_site }}{% endblock %}</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="{% static 'vehicule/css/style.css' %}">
+</head>
+<body>
+    <header class="entete">
+        <div class="statut">
+            <span class="point" id="point-statut"></span>
+            <span id="texte-statut">{% block statut %}{% endblock %}</span>
+        </div>
+
+        <a class="logo" href="{% url 'accueil' %}">
+            <svg width="28" height="28" viewBox="0 0 34 34" aria-hidden="true">
+                <circle cx="17" cy="17" r="14" fill="none" stroke="#0f1d3a" stroke-width="2.5"/>
+                <circle cx="17" cy="17" r="8" fill="none" stroke="#3b9ee8" stroke-width="2.5"/>
+                <circle cx="17" cy="17" r="2.5" fill="#0f1d3a"/>
+            </svg>
+            {{ nom_site }}
+        </a>
+
+        <div class="vehicule">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0f1d3a" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 17h14v-4l-2-5H7l-2 5z"/><circle cx="8" cy="17" r="1.8"/>
+                <circle cx="16" cy="17" r="1.8"/><path d="M5 13h14"/>
+            </svg>
+            <span class="plaque">{{ immatriculation }}</span>
+        </div>
+    </header>
+
+    {% block contenu %}{% endblock %}
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,33 @@
+# Blueprint Render : crée le site + la base PostgreSQL en une fois
+databases:
+  - name: radardrive-db
+    plan: free
+    region: frankfurt
+    databaseName: radardrive
+    user: radardrive
+
+services:
+  - type: web
+    name: radardrive
+    runtime: python
+    plan: free
+    region: frankfurt
+    buildCommand: bash build.sh
+    startCommand: python -m gunicorn radardrive.wsgi:application
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: radardrive-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: API_KEY
+        generateValue: true
+      - key: WEB_CONCURRENCY
+        value: 2
+      - key: DJANGO_SUPERUSER_USERNAME
+        sync: false
+      - key: DJANGO_SUPERUSER_EMAIL
+        sync: false
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false

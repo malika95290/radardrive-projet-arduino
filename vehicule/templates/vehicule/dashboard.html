@@ -1,0 +1,83 @@
+{% extends "vehicule/base.html" %}
+{% load static %}
+
+{% block titre %}Dashboard · {{ nom_site }}{% endblock %}
+{% block statut %}En attente de données…{% endblock %}
+
+{% block contenu %}
+<main class="dashboard">
+
+    <!-- ===== Partie gauche : carte du trajet ===== -->
+    <section class="panneau-carte">
+        <div class="carte-entete">
+            <h2>Carte du trajet</h2>
+            <span class="sous">trajet estimé · 60 dernières secondes</span>
+        </div>
+        <!-- Rempli par dashboard.js -->
+        <svg id="carte"></svg>
+    </section>
+
+    <!-- ===== Partie droite : dashboard ===== -->
+    <section class="panneau-donnees">
+        <div class="ligne">
+            <div class="carte">
+                <h2>Vitesse actuelle</h2>
+                <div class="compteur">
+                    <svg viewBox="0 0 180 180" width="170" height="170">
+                        <!-- Fond gris de l'arc (3/4 de cercle) -->
+                        <circle cx="90" cy="90" r="72" class="arc-fond"
+                                stroke-dasharray="339.3 113.1" transform="rotate(135 90 90)"/>
+                        <!-- Arc rempli selon la vitesse (longueur calculée par dashboard.js) -->
+                        <circle id="arc-vitesse" cx="90" cy="90" r="72" class="arc-vitesse"
+                                stroke-dasharray="0 452.4" transform="rotate(135 90 90)"/>
+                        <text id="texte-vitesse" x="90" y="102" text-anchor="middle">–</text>
+                    </svg>
+                </div>
+            </div>
+
+            <div class="carte">
+                <h2>Zone de détection</h2>
+                <div class="zone-detection">
+                    <div class="zone-titre" id="zone-titre"><span class="rond"></span><span id="zone-nom">–</span></div>
+                    <div class="zone-explication" id="zone-explication"></div>
+                    <div class="zone-distance">Distance mesurée <b id="zone-distance">–</b></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="carte">
+            <div class="carte-entete">
+                <h2>Distance dans le temps</h2>
+                <span class="sous">60 dernières secondes</span>
+            </div>
+            <svg id="graphique" viewBox="0 0 880 190" width="100%"></svg>
+        </div>
+
+        <div class="carte">
+            <div class="carte-entete">
+                <h2>Dernières mesures</h2>
+                <span class="sous">10 dernières · mise à jour automatique</span>
+            </div>
+            <table>
+                <thead>
+                    <tr><th>Date et heure</th><th>Distance</th><th>Zone</th><th>Vitesse</th></tr>
+                </thead>
+                <tbody id="tableau-mesures">
+                    <tr><td colspan="4" class="vide">En attente des premières mesures…</td></tr>
+                </tbody>
+            </table>
+            <div class="pied">
+                <a class="bouton" href="{% url 'historique' %}">Voir l'historique complet →</a>
+            </div>
+        </div>
+    </section>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Adresse de l'API, donnée par Django au JavaScript
+    const URL_API = "{% url 'api_dernieres_mesures' %}";
+</script>
+<script src="{% static 'vehicule/js/dashboard.js' %}"></script>
+{% endblock %}
