@@ -7,11 +7,13 @@
 // ---------- Réglages à ajuster après avoir chronométré la voiture ----------
 const VITESSE_MAX_CM_PAR_S = 40;   // distance parcourue en 1 s à 100 % de puissance
 const ANGLE_PIVOT = 90;            // angle d'un pivot à gauche ou à droite (en degrés)
-const PIXELS_PAR_CM = 0.9;         // échelle de la carte
+const PIXELS_PAR_CM = 2.2;         // échelle de la carte
 const FENETRE_SECONDES = 60;       // durée affichée sur la carte et le graphique
 const DISTANCE_MAX_GRAPHIQUE = 150; // haut du graphique, en cm
 const DELAI_DECONNEXION = 5;       // sans mesure depuis 5 s -> "Déconnectée"
-const AVANT_VOITURE_PX = 48;       // distance entre le centre de la voiture dessinée et son capteur
+const TAILLE_VOITURE = 1.55;       // taille du dessin de la voiture sur la carte
+const AVANT_VOITURE_PX = 82 * TAILLE_VOITURE; // du centre de la voiture à son pare-chocs avant (capteur)
+const RAYON_CONE_PX = 20;          // demi-largeur de la base du cône de chantier
 
 // Textes et couleurs de chaque zone
 const ZONES = {
@@ -216,7 +218,9 @@ function calculerTrajet(mesures) {
         //    angle_capteur 90 = devant, 180 = à gauche, 0 = à droite
         if (m.distance !== null && m.zone >= 1) {
             const direction = cap + (90 - m.angle_capteur);
-            const eloignement = m.distance + AVANT_VOITURE_PX / PIXELS_PAR_CM + 8; // depuis le centre de la voiture
+            // La distance mesurée va du capteur (avant de la voiture) jusqu'au BORD du cône :
+            // on ajoute donc la moitié de la voiture et le rayon du cône pour placer son centre
+            const eloignement = m.distance + (AVANT_VOITURE_PX + RAYON_CONE_PX) / PIXELS_PAR_CM;
             const obstacle = {
                 x: x + eloignement * Math.sin(radians(direction)),
                 y: y - eloignement * Math.cos(radians(direction)),
@@ -225,9 +229,12 @@ function calculerTrajet(mesures) {
             };
             // On ignore un obstacle trop proche du précédent (c'est le même)
             const dernier = obstacles[obstacles.length - 1];
-            if (!dernier || Math.hypot(obstacle.x - dernier.x, obstacle.y - dernier.y) > 40) {
+            if (!dernier || Math.hypot(obstacle.x - dernier.x, obstacle.y - dernier.y) > 60) {
                 obstacles.push(obstacle);
             } else {
+                // Même obstacle vu de plus près : on garde la mesure la plus récente, la plus précise
+                dernier.x = obstacle.x;
+                dernier.y = obstacle.y;
                 dernier.zone = Math.max(dernier.zone, obstacle.zone);
             }
         }
@@ -279,37 +286,53 @@ function afficherCarte(mesures) {
                       stroke="#3b9ee8" stroke-width="4" stroke-linecap="round" opacity="${opacite}"/>`;
     }
 
-    // Obstacles : blocs en relief (bloc blanc + ombre + bord de la couleur de la zone)
-    for (const o of trajet.obstacles) {
-        const couleur = ZONES[o.zone].couleur;
-        svg += `<g transform="translate(${versCarteX(o.x)} ${versCarteY(o.y)}) rotate(${o.direction})" filter="url(#ombre)">
-                    <rect x="-26" y="-13" width="52" height="26" rx="8" fill="#f4f6fa" stroke="${couleur}" stroke-width="3"/>
-                    <rect x="-20" y="-9" width="40" height="7" rx="3.5" fill="#ffffff"/>
+    // Cône du capteur : part de l'avant de la voiture et s'arrête au bord de l'obstacle
+    const directionCapteur = ici.cap + (90 - derniere.angle_capteur);
+    if (derniere.distance !== null) {
+        const longueur = Math.min(derniere.distance, 150) * PIXELS_PAR_CM;
+        const couleur = ZONES[derniere.zone].couleur;
+        const bout = AVANT_VOITURE_PX + longueur;
+        const cote = (bout * Math.sin(radians(18))).toFixed(1);
+        const haut = (-bout * Math.cos(radians(18))).toFixed(1);
+        svg += `<g transform="rotate(${directionCapteur})">
+                    <path d="M0 ${-AVANT_VOITURE_PX} L${-cote} ${haut} A${bout} ${bout} 0 0 1 ${cote} ${haut} Z"
+                          fill="${couleur}" opacity="0.22"/>
+                </g>`;
+        // Texte de la distance, à droite du cône
+        const centre = AVANT_VOITURE_PX + longueur + RAYON_CONE_PX;
+        const texteX = Math.sin(radians(directionCapteur)) * centre + RAYON_CONE_PX + 8;
+        const texteY = -Math.cos(radians(directionCapteur)) * centre - 12;
+        svg += `<text x="${texteX.toFixed(1)}" y="${texteY.toFixed(1)}" fill="${couleur}" font-size="15" font-weight="700">${Math.round(derniere.distance)} cm</text>`;
+    } else {
+        svg += `<g transform="rotate(${directionCapteur})">
+                    <path d="M0 ${-AVANT_VOITURE_PX} L-45 -170 A120 120 0 0 1 45 -170 Z" fill="#3b9ee8" opacity="0.10"/>
                 </g>`;
     }
 
-    // Cône du capteur, orienté selon le servo, de la couleur de la zone
-    const directionCapteur = ici.cap + (90 - derniere.angle_capteur);
-    if (derniere.distance !== null) {
-        const longueur = Math.min(derniere.distance, 200) * PIXELS_PAR_CM;
-        const couleur = ZONES[derniere.zone].couleur;
-        svg += `<g transform="rotate(${directionCapteur})">
-                    <path d="M0 ${-AVANT_VOITURE_PX} L${-longueur * 0.45} ${-AVANT_VOITURE_PX - longueur} A${longueur} ${longueur} 0 0 1 ${longueur * 0.45} ${-AVANT_VOITURE_PX - longueur} Z"
-                          fill="${couleur}" opacity="0.22"/>
-                </g>
-                <text x="${(Math.sin(radians(directionCapteur)) * (AVANT_VOITURE_PX + 34 + longueur)).toFixed(1)}"
-                      y="${(-Math.cos(radians(directionCapteur)) * (AVANT_VOITURE_PX + 34 + longueur) + 5).toFixed(1)}"
-                      text-anchor="middle" fill="${couleur}" font-size="15" font-weight="700">${Math.round(derniere.distance)} cm</text>`;
-    } else {
-        svg += `<g transform="rotate(${directionCapteur})">
-                    <path d="M0 ${-AVANT_VOITURE_PX} L-45 -150 A110 110 0 0 1 45 -150 Z" fill="#3b9ee8" opacity="0.10"/>
-                </g>`;
+    // Obstacles : cônes de chantier (5 derniers), avec un halo de la couleur de la zone
+    for (const o of trajet.obstacles) {
+        svg += dessinCone(versCarteX(o.x), versCarteY(o.y), ZONES[o.zone].couleur);
     }
 
     // La voiture (dessin original, vue de dessus), tournée selon son cap
-    svg += `<g transform="rotate(${ici.cap}) scale(0.6)">${dessinVoiture()}</g>`;
+    svg += `<g transform="rotate(${ici.cap}) scale(${TAILLE_VOITURE})" filter="url(#ombre)">${dessinVoiture()}</g>`;
 
     carte.innerHTML = svg;
+}
+
+function dessinCone(x, y, couleurZone) {
+    // Cône de chantier vu de côté ; (x, y) = centre de sa base
+    return `
+    <g transform="translate(${x} ${y})">
+        <ellipse cx="0" cy="0" rx="${RAYON_CONE_PX + 4}" ry="7" fill="none" stroke="${couleurZone}" stroke-width="3" opacity="0.9"/>
+        <ellipse cx="3" cy="4" rx="${RAYON_CONE_PX}" ry="6" fill="#000" opacity="0.35"/>
+        <rect x="${-RAYON_CONE_PX}" y="-7" width="${RAYON_CONE_PX * 2}" height="9" rx="2.5" fill="#d93a22"/>
+        <path d="M-13 -6 L-3 -46 L3 -46 L13 -6 Z" fill="#f2512f"/>
+        <path d="M-9.8 -18 L-8.3 -24 L8.3 -24 L9.8 -18 Z" fill="#ffffff"/>
+        <path d="M-6.7 -30 L-5.4 -35 L5.4 -35 L6.7 -30 Z" fill="#ffffff"/>
+        <path d="M-13 -6 L-3 -46 L-1 -46 L-8 -6 Z" fill="#ffffff" opacity="0.18"/>
+        <rect x="-3.5" y="-48" width="7" height="3" rx="1.5" fill="#d93a22"/>
+    </g>`;
 }
 
 function dessinVoiture() {
