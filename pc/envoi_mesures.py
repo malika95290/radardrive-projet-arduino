@@ -3,12 +3,14 @@ RadarDrive — script du PC
 Lit les mesures envoyées par l'Arduino sur le câble USB et les envoie au site.
 
 Format attendu de l'Arduino (une ligne par mesure, PROVISOIRE : à valider avec Nirmala) :
-    D:32;Z:1;V:58;A:RALENTIT;S:90
+    D:32;Z:1;V:58;A:RALENTIT;S:90;P:0
     D = distance en cm (D:- si rien n'est détecté)
     Z = zone (0, 1 ou 2)
     V = vitesse en % (0 à 100)
-    A = action : AVANCE, RALENTIT, ARRET, PIVOT_G, PIVOT_D, DEMI_TOUR
+    A = action : AVANCE, RALENTIT, ARRET, PIVOT_G, PIVOT_D, DEMI_TOUR, RECULE
+        (RECULE = marche arrière : les feux de recul sont allumés)
     S = angle du servo : 90 = devant, 180 = à gauche, 0 = à droite
+    P = phares : 1 = allumés, 0 = éteints (facultatif, 0 par défaut)
 
 Utilisation :
     python envoi_mesures.py --port COM3                 (avec la voiture branchée)
@@ -33,6 +35,7 @@ ACTIONS = {
     "PIVOT_G": "pivot_gauche",
     "PIVOT_D": "pivot_droite",
     "DEMI_TOUR": "demi_tour",
+    "RECULE": "recule",
 }
 
 INTERVALLE_ENVOI = 1.0  # on envoie au maximum 1 mesure par seconde...
@@ -53,6 +56,7 @@ def lire_ligne(ligne):
             "vitesse": int(morceaux["V"]),
             "action": ACTIONS[morceaux["A"]],
             "angle_capteur": int(morceaux.get("S", 90)),
+            "phares": morceaux.get("P", "0") == "1",
         }
     except (ValueError, KeyError):
         return None
@@ -76,10 +80,11 @@ def envoyer(mesure, site, cle):
 
 
 def faut_il_envoyer(mesure, derniere_envoyee, instant_dernier_envoi):
-    """...sauf si la zone ou l'action change : dans ce cas on envoie tout de suite."""
+    """...sauf si la zone, l'action ou les phares changent : dans ce cas on envoie tout de suite."""
     if derniere_envoyee is None:
         return True
-    if mesure["zone"] != derniere_envoyee["zone"] or mesure["action"] != derniere_envoyee["action"]:
+    if (mesure["zone"] != derniere_envoyee["zone"] or mesure["action"] != derniere_envoyee["action"]
+            or mesure["phares"] != derniere_envoyee["phares"]):
         return True
     return time.time() - instant_dernier_envoi >= INTERVALLE_ENVOI
 
@@ -103,40 +108,50 @@ def lignes_simulees():
     """Fabrique un trajet réaliste : avance, voit un obstacle, ralentit, s'arrête, regarde, contourne."""
     print("Mode simulation : fausses mesures, Ctrl+C pour arrêter")
     while True:
+        # Un trajet sur trois se fait "dans le noir" : les phares sont allumés
+        p = random.choice([0, 0, 1])
         # Route libre pendant quelques secondes
         for _ in range(random.randint(4, 8)):
-            yield "D:-;Z:0;V:100;A:AVANCE;S:90"
+            yield f"D:-;Z:0;V:100;A:AVANCE;S:90;P:{p}"
             time.sleep(0.5)
 
         # Un obstacle approche : la distance baisse, la voiture ralentit
         distance = random.randint(80, 120)
         while distance > 18:
             if distance > 50:
-                yield f"D:{distance};Z:0;V:100;A:AVANCE;S:90"
+                yield f"D:{distance};Z:0;V:100;A:AVANCE;S:90;P:{p}"
             else:
                 vitesse = max(25, int(100 * (distance - 20) / 30))
-                yield f"D:{distance};Z:1;V:{vitesse};A:RALENTIT;S:90"
+                yield f"D:{distance};Z:1;V:{vitesse};A:RALENTIT;S:90;P:{p}"
             distance -= random.randint(5, 9)
             time.sleep(0.5)
 
         # Trop près : arrêt, le capteur regarde à gauche puis à droite
-        yield f"D:{distance};Z:2;V:0;A:ARRET;S:90"
+        yield f"D:{distance};Z:2;V:0;A:ARRET;S:90;P:{p}"
         time.sleep(1)
+        # Petite marche arrière : les feux de recul s'allument
+        for _ in range(3):
+            distance += random.randint(3, 6)
+            zone = 2 if distance < 20 else 1
+            yield f"D:{distance};Z:{zone};V:50;A:RECULE;S:90;P:{p}"
+            time.sleep(0.5)
+        yield f"D:{distance};Z:{zone};V:0;A:ARRET;S:90;P:{p}"
+        time.sleep(0.5)
         gauche = random.choice([None, random.randint(25, 120)])
         droite = random.choice([None, random.randint(25, 120)])
         for angle, mesure in ((170, gauche), (10, droite)):
             if mesure is None:
-                yield f"D:-;Z:0;V:0;A:ARRET;S:{angle}"
+                yield f"D:-;Z:0;V:0;A:ARRET;S:{angle};P:{p}"
             else:
                 zone = 0 if mesure > 50 else (1 if mesure >= 20 else 2)
-                yield f"D:{mesure};Z:{zone};V:0;A:ARRET;S:{angle}"
+                yield f"D:{mesure};Z:{zone};V:0;A:ARRET;S:{angle};P:{p}"
             time.sleep(1)
 
         # Pivot vers le côté le plus libre
         libre_gauche = math.inf if gauche is None else gauche
         libre_droite = math.inf if droite is None else droite
         action = "PIVOT_G" if libre_gauche >= libre_droite else "PIVOT_D"
-        yield f"D:-;Z:0;V:60;A:{action};S:90"
+        yield f"D:-;Z:0;V:60;A:{action};S:90;P:{p}"
         time.sleep(1)
 
 

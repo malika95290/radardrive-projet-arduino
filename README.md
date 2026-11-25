@@ -12,7 +12,7 @@ Arduino --USB--> pc/envoi_mesures.py --internet--> site Django (Render) --> base
 ```
 radardrive/            réglages du projet Django (settings.py, urls.py)
 vehicule/              l'application
-  models.py            table Mesure : date, distance, zone, vitesse, action, angle_capteur
+  models.py            table Mesure : date, distance, zone, vitesse, action, angle_capteur, phares
   views.py             pages (accueil, dashboard, historique) + API
   templates/vehicule/  pages HTML
   static/vehicule/     style.css + dashboard.js (mise à jour toutes les secondes)
@@ -66,7 +66,7 @@ python pc/envoi_mesures.py --port COM3 --site https://radardrive-xxxx.onrender.c
 Une ligne par mesure, à 9600 bauds :
 
 ```
-D:32;Z:1;V:58;A:RALENTIT;S:90
+D:32;Z:1;V:58;A:RALENTIT;S:90;P:0
 ```
 
 | Clé | Sens | Valeurs |
@@ -74,8 +74,9 @@ D:32;Z:1;V:58;A:RALENTIT;S:90
 | D | distance en cm | nombre, ou `-` si rien n'est détecté |
 | Z | zone | 0 (> 50 cm), 1 (20 à 50 cm), 2 (< 20 cm) |
 | V | vitesse | 0 à 100 (% de puissance) |
-| A | action | AVANCE, RALENTIT, ARRET, PIVOT_G, PIVOT_D, DEMI_TOUR |
+| A | action | AVANCE, RALENTIT, ARRET, PIVOT_G, PIVOT_D, DEMI_TOUR, RECULE (feux de recul) |
 | S | angle du servo | 90 devant, 180 à gauche, 0 à droite |
+| P | phares | 1 allumés, 0 éteints (facultatif) |
 
 ## Réglages de la carte du trajet
 

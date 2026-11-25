@@ -69,6 +69,7 @@ def api_ajouter_mesure(request):
         vitesse = int(donnees["vitesse"])
         action = donnees.get("action", "avance")
         angle = int(donnees.get("angle_capteur", 90))
+        phares = bool(donnees.get("phares", False))  # True si les phares sont allumés
         distance = donnees.get("distance")  # None si rien n'est détecté
         if distance is not None:
             distance = float(distance)
@@ -88,7 +89,8 @@ def api_ajouter_mesure(request):
     # 4. Enregistrer
     mesure = Mesure.objects.create(
         distance=distance, zone=zone, vitesse=vitesse,
-        action=action, angle_capteur=angle,
+        action=action, angle_capteur=angle, phares=phares,
+        feux_recul=(action == "recule"),  # les feux de recul s'allument en marche arrière
     )
     return JsonResponse({"ok": True, "id": mesure.id}, status=201)
 
@@ -110,6 +112,8 @@ def api_dernieres_mesures(request):
             "vitesse": m.vitesse,
             "action": m.action,
             "angle_capteur": m.angle_capteur,
+            "phares": m.phares,
+            "feux_recul": m.feux_recul,
         })
 
     return JsonResponse({"maintenant": timezone.now().timestamp(), "mesures": liste})

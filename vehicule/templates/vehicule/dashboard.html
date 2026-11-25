@@ -23,7 +23,7 @@
             <div class="carte">
                 <h2>Vitesse actuelle</h2>
                 <div class="compteur">
-                    <svg viewBox="0 0 180 180" width="170" height="170">
+                    <svg viewBox="0 0 180 180" width="110" height="110">
                         <!-- Fond gris de l'arc (3/4 de cercle) -->
                         <circle cx="90" cy="90" r="72" class="arc-fond"
                                 stroke-dasharray="339.3 113.1" transform="rotate(135 90 90)"/>
@@ -43,14 +43,47 @@
                     <div class="zone-distance">Distance mesurée <b id="zone-distance">–</b></div>
                 </div>
             </div>
+
+            <div class="carte">
+                <h2>Phares</h2>
+                <div class="voyant" id="phares">
+                    <!-- Phare éteint : gris, sans rayons. Allumé : bleu nuit avec rayons jaunes -->
+                    <svg viewBox="0 0 64 48" width="64" height="48" aria-hidden="true">
+                        <path class="phare-corps" d="M8 24c0-10 7-17 17-17h2v34h-2C15 41 8 34 8 24z"/>
+                        <g class="phare-rayons">
+                            <path d="M33 10l24-3M33 18l26-1M33 26l26 1M33 34l24 3"/>
+                        </g>
+                    </svg>
+                    <span id="texte-phares">–</span>
+                </div>
+            </div>
+
+            <div class="carte">
+                <h2>Feux de recul</h2>
+                <div class="voyant" id="recul">
+                    <!-- Arrière de voiture : feux gris si éteints, rouges et lumineux en marche arrière -->
+                    <svg viewBox="0 0 64 48" width="64" height="48" aria-hidden="true">
+                        <path class="recul-carrosserie" d="M10 20l6-12h32l6 12v16a3 3 0 0 1-3 3H13a3 3 0 0 1-3-3z"/>
+                        <rect class="recul-vitre" x="19" y="11" width="26" height="8" rx="2"/>
+                        <circle class="recul-halo" cx="17" cy="28" r="9"/>
+                        <circle class="recul-halo" cx="47" cy="28" r="9"/>
+                        <rect class="recul-feu" x="12" y="24" width="10" height="7" rx="2"/>
+                        <rect class="recul-feu" x="42" y="24" width="10" height="7" rx="2"/>
+                    </svg>
+                    <span id="texte-recul">–</span>
+                </div>
+            </div>
+        </div>
+            </div>
         </div>
 
-        <div class="carte">
+        <div class="carte carte-graphique">
             <div class="carte-entete">
                 <h2>Distance dans le temps</h2>
                 <span class="sous">60 dernières secondes</span>
             </div>
-            <svg id="graphique" viewBox="0 0 880 190" width="100%"></svg>
+            <!-- Le graphique prend toute la hauteur disponible (taille calculée par dashboard.js) -->
+            <svg id="graphique"></svg>
         </div>
 
         <div class="carte">

@@ -22,7 +22,7 @@
 
         <table>
             <thead>
-                <tr><th>Date et heure</th><th>Distance</th><th>Zone</th><th>Vitesse</th><th>Action</th></tr>
+                <tr><th>Date et heure</th><th>Distance</th><th>Zone</th><th>Vitesse</th><th>Action</th><th>Phares</th><th>Feux de recul</th></tr>
             </thead>
             <tbody>
                 {% for m in page %}
@@ -32,9 +32,11 @@
                     <td><span class="pastille z{{ m.zone }}">Zone {{ m.zone }}</span></td>
                     <td>{{ m.vitesse }} %</td>
                     <td>{{ m.get_action_display }}</td>
+                    <td>{% if m.phares %}<span class="etat allume">Allumés</span>{% else %}<span class="etat">Éteints</span>{% endif %}</td>
+                    <td>{% if m.feux_recul %}<span class="etat recul">Allumés</span>{% else %}<span class="etat">Éteints</span>{% endif %}</td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="5" class="vide">Aucune mesure pour le moment.</td></tr>
+                <tr><td colspan="7" class="vide">Aucune mesure pour le moment.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

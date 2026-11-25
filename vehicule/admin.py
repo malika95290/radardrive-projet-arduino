@@ -5,5 +5,5 @@ from .models import Mesure
 
 @admin.register(Mesure)
 class MesureAdmin(admin.ModelAdmin):
-    list_display = ["date", "distance", "zone", "vitesse", "action", "angle_capteur"]
-    list_filter = ["zone", "action"]
+    list_display = ["date", "distance", "zone", "vitesse", "action", "angle_capteur", "phares", "feux_recul"]
+    list_filter = ["zone", "action", "phares", "feux_recul"]

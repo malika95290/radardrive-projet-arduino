@@ -11,7 +11,7 @@ const PIXELS_PAR_CM = 2.2;         // échelle de la carte
 const FENETRE_SECONDES = 60;       // durée affichée sur la carte et le graphique
 const DISTANCE_MAX_GRAPHIQUE = 150; // haut du graphique, en cm
 const DELAI_DECONNEXION = 5;       // sans mesure depuis 5 s -> "Déconnectée"
-const TAILLE_VOITURE = 1.55;       // taille du dessin de la voiture sur la carte
+const TAILLE_VOITURE = 0.95;       // taille du dessin de la voiture sur la carte
 const AVANT_VOITURE_PX = 82 * TAILLE_VOITURE; // du centre de la voiture à son pare-chocs avant (capteur)
 const RAYON_CONE_PX = 20;          // demi-largeur de la base du cône de chantier
 
@@ -37,6 +37,8 @@ async function mettreAJour() {
         const derniere = mesures[0];
         afficherVitesse(derniere.vitesse);
         afficherZone(derniere);
+        afficherPhares(derniere.phares);
+        afficherRecul(derniere.feux_recul);
         afficherTableau(mesures.slice(0, 10));
 
         // Pour le graphique et la carte : seulement la fenêtre des 60 dernières secondes,
@@ -112,6 +114,20 @@ function texteDistance(distance) {
 }
 
 
+// ---------- Phares et feux de recul ----------
+
+function afficherPhares(allumes) {
+    document.getElementById("phares").className = allumes ? "voyant allume" : "voyant";
+    document.getElementById("texte-phares").textContent = allumes ? "Allumés" : "Éteints";
+}
+
+// Les feux de recul sont allumés quand la voiture fait marche arrière (action "recule")
+function afficherRecul(allumes) {
+    document.getElementById("recul").className = allumes ? "voyant allume" : "voyant";
+    document.getElementById("texte-recul").textContent = allumes ? "Allumés" : "Éteints";
+}
+
+
 // ---------- Tableau des 10 dernières mesures ----------
 
 function afficherTableau(mesures) {
@@ -131,7 +147,11 @@ function afficherTableau(mesures) {
 // ---------- Graphique : distance dans le temps ----------
 
 function afficherGraphique(mesures, finFenetre) {
-    const largeur = 880, hauteur = 190, gauche = 40, bas = 24, haut = 10;
+    // Le graphique s'adapte à la place disponible dans la carte
+    const graphique = document.getElementById("graphique");
+    const largeur = graphique.clientWidth || 880, hauteur = graphique.clientHeight || 190;
+    graphique.setAttribute("viewBox", `0 0 ${largeur} ${hauteur}`);
+    const gauche = 40, bas = 24, haut = 10;
 
     // Conversion temps -> x et distance -> y
     const x = t => gauche + (largeur - gauche) * (1 - (finFenetre - t) / FENETRE_SECONDES);
@@ -199,8 +219,9 @@ function calculerTrajet(mesures) {
         // 1. Déplacement depuis la mesure précédente
         if (precedente) {
             const duree = Math.min(m.horodatage - precedente.horodatage, 2); // max 2 s (coupure)
-            if (precedente.action === "avance" || precedente.action === "ralentit") {
-                const distance = (precedente.vitesse / 100) * VITESSE_MAX_CM_PAR_S * duree;
+            if (precedente.action === "avance" || precedente.action === "ralentit" || precedente.action === "recule") {
+                let distance = (precedente.vitesse / 100) * VITESSE_MAX_CM_PAR_S * duree;
+                if (precedente.action === "recule") distance = -distance; // marche arrière
                 x += distance * Math.sin(radians(cap));
                 y -= distance * Math.cos(radians(cap));
             }
@@ -312,6 +333,22 @@ function afficherCarte(mesures) {
     // Obstacles : cônes de chantier (5 derniers), avec un halo de la couleur de la zone
     for (const o of trajet.obstacles) {
         svg += dessinCone(versCarteX(o.x), versCarteY(o.y), ZONES[o.zone].couleur);
+    }
+
+    // Faisceaux des phares devant la voiture quand ils sont allumés
+    if (derniere.phares) {
+        svg += `<g transform="rotate(${ici.cap})" opacity="0.35">
+                    <path d="M-16 ${-AVANT_VOITURE_PX + 4} L-46 ${-AVANT_VOITURE_PX - 90} L-2 ${-AVANT_VOITURE_PX - 90} Z" fill="#ffe9a3"/>
+                    <path d="M16 ${-AVANT_VOITURE_PX + 4} L2 ${-AVANT_VOITURE_PX - 90} L46 ${-AVANT_VOITURE_PX - 90} Z" fill="#ffe9a3"/>
+                </g>`;
+    }
+
+    // Feux de recul : halo rouge derrière la voiture en marche arrière
+    if (derniere.action === "recule") {
+        svg += `<g transform="rotate(${ici.cap})">
+                    <ellipse cx="-12" cy="${AVANT_VOITURE_PX * 0.9}" rx="14" ry="10" fill="#ff3b3b" opacity="0.5"/>
+                    <ellipse cx="12" cy="${AVANT_VOITURE_PX * 0.9}" rx="14" ry="10" fill="#ff3b3b" opacity="0.5"/>
+                </g>`;
     }
 
     // La voiture (dessin original, vue de dessus), tournée selon son cap

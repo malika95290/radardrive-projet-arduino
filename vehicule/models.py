@@ -17,6 +17,7 @@ class Mesure(models.Model):
         ("pivot_gauche", "Pivote à gauche"),
         ("pivot_droite", "Pivote à droite"),
         ("demi_tour", "Demi-tour"),
+        ("recule", "Recule"),
     ]
 
     # Date et heure de réception, remplie automatiquement par Django
@@ -36,6 +37,12 @@ class Mesure(models.Model):
 
     # Direction du capteur sur le servo : 90 = devant, 180 = à gauche, 0 = à droite
     angle_capteur = models.PositiveSmallIntegerField(default=90)
+
+    # Phares automatiques : True quand la photorésistance détecte qu'il fait sombre
+    phares = models.BooleanField(default=False)
+
+    # Feux de recul : True quand la voiture fait marche arrière (action "recule")
+    feux_recul = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["-date"]  # les plus récentes en premier
